@@ -1,0 +1,497 @@
+分布式微服务架构的一种
+
+
+
+
+			[系统监控链路追踪]
+				注册中心			配置中心
+				|(拉取或者注册服务信息)	|(拉取配置信息)					   --->kubernetes
+{}------服务网关___>(请求路由负载均衡)    [服务集群					    ]____>分布式缓存--->数据库_____>jenkins--->docker
+				|					     ——>分布式搜索			   --->rancher
+				消息队列
+			[分布式日志服务]
+________________________________________________________________________________________________________________________________________________________-
+技术栈:
+
+微服务治理
+异步通信
+缓存技术
+DevOps
+搜索技术
+
+________________________________________________________________________________________________________________________________________________________-
+分层次教学:
+实用篇
+高级篇
+面试篇
+_________________________________________________________________________________________________________________________________________________________-
+
+[单体架构]:
+"{所有业务集中在一个项目中开发}"
+{}优点:
+架构简单
+部署成本低
+{}缺点:
+耦合度高
+
+[分布式架构]:根据业务对系统进行拆分,每个业务模块作为独立项目开发,称为一个服务.
+优点:
+降低服务耦合
+有利于服务升级扩展
+
+
+服务治理:
+服务拆分粒度?
+服务集群地址如何维护?
+服务之间如何远程调用?
+服务健康状态如何感知?
+
+微服务:
+单一职责:服务粒度小,一个服务一个业务能力
+面向服务:对外暴露接口
+自治:团队独立(符合敏捷开发),技术独立(),数据独立(单一数据库单一数据),部署独立()
+隔离性强:服务调用做好隔离,容错,降级,避免出现级联关系
+
+（国内知名架构:阿里的springcloud,阿里的dubbo,springcloud）
+
+Feign:HTTP协议服务接口与调用
+dubbo:RPC协议(Double协议)服务接口与调用
+
+基于springboot自动装配
+
+
+[服务集群]:
+服务拆分以及远程调用
+拆分注意事项:
+1.不同服务,不要重复开发相同业务
+2.微服务数据独立,不要访问其他微服务数据库
+3.将业务暴露接口,供其他微服务调用
+
+
+mod cloud_demo{
+	struct order{
+		id:int,
+		name:String,
+		price:flot,
+		num:int,
+		userID:int,	
+	}
+	struct user{
+		id:int,
+		username:String,
+		address:String,
+	}
+	
+	::mod order_service{
+		impl query_order(){
+		return order}	
+	} ::db1.order_service.sql
+
+	@getmapping('/user/id')
+	::mod user_service{
+		impl query_usr(){
+		return usr}	
+	} ::db2.user_service.sql
+}
+
+远程调用方式分析:
+
+服务发送请求到服务
+
+@Bean:"制作模板在Applocation模板注入在controller"
+@Autowired:"注入到服务器块"
+
+
+服务提供者:一次业务中,被其他微服务调用的服务(提供接口给其他服务)
+服务消费者:一次业务中,调用其他服务的服务(调用其他微服务提供的接口)
+
+order-service-------->user-service
+一个服务既可以是提供者又可以是消费者
+提供者和消费者是相对的接口
+
+
+Eureka注册中心
+！引入依赖
+！在yml中配置地址
+
+
+
+问题:
+硬编码调用服务
+消费者获取提供者信息:
+	提供者注册信息到注册中心，30秒心跳
+	
+消费者的选择:
+	负载均衡算法
+健康状态:
+	心跳检测
+eureka-server：注册中心
+eureka-client：服务消费者,服务提供者
+
+
+
+链接器_ribbon(拉取信息)负载均衡
+
+Irul:规则接口IRule,默认为zone
+代码or配置
+开启饥饿加载,指定饥饿加载服务名称
+
+
+
+
+nacos注册中心:服务注册,服务发现,分布式配置.
+
+nacos服务多级存储模型
+服务
+集群[区域划分多集群]
+实例,实例,实例,实例,实例,实例
+
+集群有限,随机实例
+
+可修改实例权重
+权重值0-1
+权重越高访问频率越高
+0权重不访问
+
+环境隔离
+namespace::Group::Server/Data::consummer集群::实例
+最外层隔离后无法互相访问
+新建
+代码区配置:namespace:命名空间ID
+————————————————————————————————
+nacos与eureka的区别
+
+ nacos-server
+	|
+ ------------------------------------------------------------------------------------------
+(定时pull)|(主动推送消息push) 	    (心跳检测)|(非临时实例nacos主动询问)|(注册服务信息)
+order-server--------------------(远程调用)--------user-server
+
+
+nacos默认AP模式,非临时使用CP模式[强调一致性]
+eureka默认AP不支持切换
+
+············································
+
+
+Nacos配置管理
+统一配置管理
+[注册中心,配置服务]
+[读取配置]	     [注册发现]
+[微	服	务]
+Data ID：服务名-环境.后缀名{yaml}
+Group:默认
+配置内容:[热更新统一配置]
+	pattern:
+		dateformat:
+			yyyy-MM-dd  HH:mm:ss
+
+1.项目启动,读取nacos配置文件,读取本地yml,创建spring容器,加载bean。
+[bootstrap.yml文件获取nacos地址]
+{引入配置依赖;配置优先级高的bootstrap}
+@Refreshscope
+class xxx{
+	@Value
+}
+
+@Comportment暴露可注入类
+@configurpropartion
+[多环境配置共享]
+微服务启动时会从nacos读取多个配置文件
+name-active.yml
+name.yml{多环境共享配置}
+
+config.写配置中心注解与配置中心模式作为属性这些属性封装在对象当中.这些值都可以暴露接口在web中的{服务controller}
+优先级
+服务名-环境>服务名>本地环境[.yml]
+——————————————————————
+搭建高可用集群
+nacos-cli
+SLB[njinx负载均衡]
+nacos集群
+mysql集群[采用官方提供字段,采用主从从架构]
+
+clus.conf配置
+数据源取消注解
+数据库配置
+[nacos复制三份改端口则三个节点]
+nginx反向代理负载均衡
+
+
+Feign远程调用
+声明式客户端,帮助我们实现http请求
+1.引入依赖
+[dependice]
+2.加注解加开关
+3.编写客户端
+@FeignClient('userservice')服务名;
+public interface UserClient{
+	@GetMapping（'/user/{id}'）;方式;路径
+	User findById(@PathVariable('id') Long id);参数;类型
+	//服务名;方式;路径;参数;类型
+}
+集成了ribbon实现了自动负载均衡
+自定义配置(可修改如下)
+feign.Logger.Level日志级别 NONE BASIC  HEADERS FULL
+feign.codec.Decoder响应结果解析器
+feign.codec.Encoder请求参数编码
+feign.Contract默认MVC注解
+feign.Retryer失败重试机制 默认没有 使用ribbon重试
+
+配置文件[default全局配置]or代码配置[{@EnableFeigClient(Cfg=.class)启动类(applocation)中注解}声明一个类声明一个Bean]
+
+最佳实践:
+	方式一(继承):定义统一上层接口[容易造成紧耦合,不推荐相关实现]
+	方式二(抽取):将客户端抽取为独立模块，并把接口有关的POJO默认的Feign配置都放到这个模块中提供给所有消费者.[引用依赖+远程调用]
+
+[[[]spring扫描注解创建对象[]]]
+关于扫描包范围解决方案
+方式一：指定FeignClient所在包basePackages
+方式二：指定字节码{观看范围}clients
+
+
+Gateway服务网关
+为什么需要网关？
+功能:#[对用户]
+身份认证和权限校验
+服务路由,负载均衡
+请求限流
+
+zuul基于servlet实现阻塞式编程
+gatway基于响应式编程
+
+搭建步骤:
+	1引入依赖{nacos服务发现依赖,网关依赖}
+	2路由配置
+	spring:
+		port：
+	spring：
+		application：
+			name：
+	cloud:
+		nacos:
+			server-addr:
+		gateway:
+			routes:[-表示数组集合]
+				-id：唯一路由路标
+				 uri：路由的目标地址lb://ip负载均衡
+				 predicates：#路由断言某种属性
+					-Path=/user/**#符合以/user/开头的请求路径
+					-断言工厂
+			defaultfilter:
+	{十多个}路由断言工厂类：断言规则是字符串.[通过官方文档]
+	
+	路由过滤器(Gateway Filter):
+		对进入网关的请求和微服务返回的响应做处理
+		defaultfilter：默认全局响应器
+	全局过滤器接口(ClobalFilter):
+		@Order(权限)or接口Order(){return 权限}
+		需要自己实现而非配置
+		可请求上下文获取请求或响应
+		(上下文对象,(接收对象)过滤器放行对象)
+		上下文.获取响应.拦截设置状态码
+		返回参数
+
+	filter执行顺序:请求路由后;会把所有过滤器合并成利用链<集合>排序后一次执行每个过滤器
+	Adapter适配器模式:globalfilter都会被转为gatwayfilter类型
+	过滤器顺序:order越小优先级越高
+		路由和default由spring根据声明顺序赋值order
+		当order一样时按照default>路由>global执行顺序
+
+
+	跨域问题处理:
+		CORS配置参数:
+
+[Docker]
+	{服务器软件-实例}
+	[Libraries函数库][Dependencies依赖]
+	LInux操作系统
+	计算机硬件
+	Docker为每个服务提供了{沙箱[容器],依赖,函数库}
+	Docker将用户程序和所需要调用的系统函数库打包成镜像
+	Docker使用沙箱机制应用互相隔离
+	Docker包含完整环境,只依赖于系统内核,因此可以在任意一个操作系统运行
+	操作系统结构:object{系统应用:组装内核指令称为函数,linux:内核指令调用硬件}
+	{虚拟机[基于Hypervisor]:模拟硬件}
+	区别:	        docker	虚拟机
+		性能:接近原生   	性能较差
+		       一般为MB 	一般为GB
+		       秒级	       	分钟级
+	____________________________________________|
+	镜像(images):依赖,函数库,环境,配置等文件打包在一起,称为镜像.
+	容器(Container):镜像中的应用程序运行后形成的进程就是容器,对外不可见.,一个镜像可以有多个容器.
+	DockerHub:镜像服务器[Docker镜像托管平台{Registy}]
+	是一种C/S架构:
+		client：通过命令,或者RestAPI向服务器发送指令.
+		server：Docker守护进程,负责处理docker指令(docker daemon守护进程),管理镜像,容器.
+	安装:
+		yum install -y docker-ce[ce指社区版]
+	启动docker务必关闭防火墙
+	命名规范
+	[[Repository]:[tag]]{默认latast{默认最新}}
+
+	{official官方标签}
+	docker build/push/pull 构建/上传/拉取镜像
+	docker images/rmi 查看/删除镜像
+	docker save/load 保存/加载压缩包
+	
+	docker pause/unpause 暂停存储活动容器状态
+	docker start/stop 停止回收活动容器内存
+
+	docker log/ps 查看日志/内部状态[-f持续查看日志]
+
+	docker exec 进入容器内部执行命令
+
+	docker rm 删除整个容器
+	
+	docker run 运行命令
+	{hub.docker查询相关容器的使用指南}
+	--name 容器唯一名称
+	-p 端口映射 [宿主器端口:容器端口]{暴露小窗口链接到容器端口,容器端口无法被直接访问}
+	-d {后台运行}|镜像名[[Repository]:[tag]]
+	
+	{数据共享}数据卷[volumes]:
+		容器与数据耦合问题:
+			不便于修改,数据不可重复,升级维护困难
+	
+		/var/lib/docker/volums/[[Container/[文件映射到volums]]再映射宿主机到volums]
+		/root
+	docker volume create/inspect/ls/prune/rm 创建/查看信息/查名称/删除未使用/删除指定
+	docker run -v 挂载的数据卷:容器内Path运行时volume不存在则自动创建
+	宿主机挂载-v[宿主机目录]:[容器内目录]
+	-e 环境变量
+	Entrypoint脚本入口:程序启动的脚本参数
+	Layer层:每次操作分一层
+	BaseImagae基础镜像:应用依赖系统函数库,环境,配置,文件等
+	Dockerfile:
+		FROM 指定基础镜像{一般是操作系统或者他人构建的镜像}
+		ENV key value 设置环境变量{一般用来指定安装目录}
+		COPY拷贝本地文件到镜像的指定目录
+		RUN执行linux 的 shell命令一般指安装过程
+		EXPOSE 制定运行是监听端口
+		ENTRYPOINT 指定运行启动命令
+	local(本地)
+	Docker-Compose.yml:基于Compose文件快速部署分布式应用
+	通过指令定义集群中每个容器如何运行
+	<
+	version：""
+		services:
+			mysql：
+				image：mysql：5.7.25
+				environment:
+					MYSQL_ROOT_PASSWORD：123
+				volums：
+					-/tmp/mysql/data:/var/lib/mysql
+					-/tmp/mysql/conf/hmy.cnf:/etc/mysql/conf.d/my.cnf
+			web:
+				build：.
+				ports:
+					-8090：8090
+	>
+	docker-compose up -d
+
+	仓库的搭建:
+		配置"insecure-registry":[]
+		docker tag 旧名字 ip:port/新名字:版本
+		docker push 名字
+		docker pull 名字
+	同步通讯:
+		及时消息
+	异步通信:
+		可以一发多消息
+
+	基于Feign属于同步服务:
+		存在问题:
+			耦合度高.
+			性能下降.
+			资源浪费.
+			级联失败.
+						
+	事件驱动:
+		[Broker]:
+			收集成功事件,发布事件到订阅方
+			优点:
+				事件解耦
+				性能提升吞吐量提升
+				减少级联失败
+				流量消峰
+
+			缺点:
+				依赖于Broker的可靠性,安全性,吞吐能力
+				架构复杂,业务没有明显的流程线,不好追踪管理
+		::MQ(MessageQueue)消息队列
+		RabbitMQ		ActiveMQ				RocketMQ	Kafka
+		rabbitmq   		apache    		 		ali            		 apache
+	语言	Erlang       		java         				java          	 Scala&java
+	协议	AMQP,XMPP,SMTP,STOMP     OpenWire,STOMP,REST,XMPP,AMQP   自定义协议		自定义协议
+	可用性	高			一般				高		高
+	单机吞吐量 一般			差				高		非常高
+	消息延迟	微秒级			毫秒级				毫秒级		毫秒以内
+	消息可靠性 高			一般				高		一般
+	[SpringAMQP]:高级消息队列规范{底层使用spring-rabbit-cli}
+	rabbitMQ
+		基本消息队列:[一对一消费](basic)
+			publisher:消息发布者
+			创建链接,创建队列
+			consumer:消息订阅者
+			创建链接,创建队列
+		工作消息队列:[一对多消费](work)能者[线程]多劳	           ->queue2->consumer2
+		发布订阅:publisher->exchange[交换机:只负责转发不负责存储]->queue1->consumer1
+			广播{fanout}:路由发送个相同消息
+			路由{Direct}:路由给指定的队列{根据bindingKey：{使用@RabbitListenter声明交换机Exchange,队列Queue,绑定Binding}}
+			主题{Topic}:路由的routingKey必须是多个单词列表.分割
+			bindingKey:#多个单词
+				  *一个单词
+		trait{
+			监听容器异步处理消息
+			用于发送和接收消息
+			rabbitadmin用于自动化队列声明
+		}
+	最外层容器引入依赖
+	提高速度避免消息堆积
+	@Configuration声明类
+		@Bean声明交换机Exchange,队列Queue,绑定Binding
+
+	SpringAMQP的--消息转换器
+		利用MessageConverter实现，默认JDK的序列化(base64编码)
+		发送方与接收方统一MessageConverter配置
+
+[elasticsearch:开源搜素引擎]搜索实现{ELK,搜索,日志统计,分析,系统监控}
+数据可视化:kibana
+[核心]存储,计算,搜索数据:elasticsearch{基于lucene的API库:易扩展,高性能}:支持分布式,可水平扩展,提供Restful接口任何语言都可以调用
+数据抓取:logstash;beats
+	[核心]:倒排索引Struct table{词条,文档id}
+	基于文档存储{JSON}
+	索引:相同类型文档的集合
+	字段:
+	约束: 
+	映射
+	数据库负责事务类型操作
+	ES负责海量数据的搜索分析计算
+docker network create 网络名{单点网络隔离}
+暴露 data 与plugins
+--privileged
+--network 网络名
+————————————————————————、
+docker kibana:注意节点版本一致{采用DSL语句进行管理}
+————————————————————————、
+
+
+
+
+
+当前软件:nacos集群,nginx处理nacos集群均衡,ribbon负责服务集群负载均衡,feign(远程调用),getway((网关)负责接入流量审核以及负载均衡),RibbitMQ{Broker}异步通信,
+
+	
+spring中加注解可注入参数编写代码返回参数		
+
+[	]
+工程师:
+{架构设计}
+{平台选择}
+{内存分析}
+{模型构建}
+{实例开启}
+{运维测试}
+{服务上线}
+[	]
