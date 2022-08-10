@@ -1,0 +1,1735 @@
+[redis][企业级开发]
+[基础篇]
+
+{"键值数据库":{"value"}}
+模式{|key|:|value|}=>NoSql
+
+NoSQL是什么?
+
+[S  Q  L]    :  关系型数据库
+#1结构化(Structured)
+[PrimaryKey]	   [Unique]		[unsigned]
+      | 		        |                                             |
+      id   		     name 			     age
+       1                             张三			      18
+
+
+
+[bigint(20)]	[varchar(32)]	                   [int(3)]
+#2关联的(Relational)
+多对多
+一对多
+#3SQL查询
+select id,name,age from tb_person
+
+#4无ACID模型
+SQL会在底层帮你维护ACID模型
+#存储方式
+磁盘
+#扩展性
+垂直(机械数量,数据总量没变)
+#使用场景
+1)数据结构固定
+2)相关业务对数据安全性,一致性要求高.
+
+[NoSQL]    :  非关系型数据库
+#1非结构化(NoStructured)
+
+
+key:value[redis]
+Key	|||	Value
+______________________________
+id	|||       	1
+name	|||	张三
+age	|||	18
+———————————————
+Document[MongoDB]
+{
+	id:2
+	name:"李四",
+	age:20
+}
+Graph[Neo4j]
+O-----o
+|
+|
+O-----o
+
+col[HBase]
+#2非关联的(NoRelational)
+对于关系数据需要用户自己维护
+#非SQL查询
+Redis命令get user:1
+MangoDB函数db.user.find({_id:1})
+elasticseach请求(GET 协议/域名/路径)
+#BASE
+无法完全保证ACID
+
+#存储方式
+内存
+#扩展性
+水平
+
+#使用场景
+1)数据结构不固定
+2)对一致性，安全性要求不高
+3)对性能要求
+
+[redis]{ 远程词典服务器 : Remote Dictionary Server }
+特征向量:
+1.键值(key-value)型
+2.单线程,每个命令具有原子属性
+3.低延迟,速度快(基于内存,IO多路复用,良好的编码)
+4.支持数据持久化
+5.支持主从集群,分片机群。
+6.支持多语言客户端.
+
+
+安装:
+1.路径:/usr/local/src
+2.配置(后台):/usr/local/src/redis-*/redis.conf
+#监听ip
+bind
+#守护进程 是/否后台运行
+daemonize
+#密码 
+requirepass
+#端口
+port
+#工作目录(default)[.当前工作目录]
+dir
+#数据库数量
+databases
+#能够使用的最大内存
+maxmemory
+#日志文件
+logfile "redis.log"
+启动:
+redis-server  redis.conf
+
+systemctl demon-reload操作系统获取操作权限
+连接:
+sudo redis-cli  -h 192.168.175.134 -p 6379
+192.168.175.134:6379> ping 
+PONG
+REDIS GUI:
+redisdesktopmanager
+
+
+
+[redis数据结构]
+
+key[一般为string] : value[类型多样]
+[普通类型]
+String 	          | helloword
+Hash
+List
+Set
+SortedSet
+[特殊类型]
+GEO[地理坐标]
+BitMap
+HyperLog
+
+
+[redis通用命令Keys(help @generic)]
+Keys pattern(模板)[符合表达式的所有结果]%生产环境下主节点不建议使用
+DEL key [key...]  删除一个key
+Exists key [key...] 是否存在key
+EXpire key seconds 给key上设置存活时间
+TTL key [key..] 查看key存活时间
+
+
+
+
+{"String":
+{"存储":{"string":hello word,
+	"int":10
+	"float":92.5}},
+{"常见命令":{"set":"存"},{"get":"取"},{"mset":"批量添加"},{"mget":"批量获取"},
+	{"incr":"数值自增"},{"incrby":"数值自增 制定步长"},
+	{"decr":"int自减"},{"incrbyfloat":"float自增 步长"},
+	{"setnx(set key value nx)":"key存在不新增key,不存在新增key,返回值1|0"},
+	{"setex key seconds value(set key value seconds ex)":"指定存活时间"}}
+
+[redis的key允许多个单词形成层级结构]:[项目名:业务名:类型:id]
+____________________________________________________
+		Key           |	Value	    	
+____________________________________________________|
+	项目名:业务名:类型:id |	JSON		
+____________________________________________________|
+
+[GUI]
+——————————————————————————————
+*|项目名						  |
+_*|业务名	                   				  |						 
+__*|类型						  |
+___*|id						  |
+____________________________________________________________  |
+
+
+
+
+{"Hash":
+{"存储":[散列表]
+          """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""|
+               		Key              |	             Value	             |
+			    |	field	|        value           |
+          """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+},
+{"使用方法":
+{"HSET/GET":"hset key field value"},
+{"HMGET/SET":""},
+{"HKEYS/HVALS":""},
+{"HINCBY":""},
+{"HSETNX":""},
+{"HGETALL":""}
+}
+}
+
+
+
+
+{"List":
+{"双向链表:存储":},
+{"使用方法":
+{"L/RPUSH|L/RPOP":"左右插入key element移出并返回key"},
+{"LRANGE key star end":"返回一段角标范围内的所有元素"},
+{"BL/R{ock}POP":'阻塞一段时间后返回值"}
+{"堆栈":L/RPUSH|L/RPOP}/*双向链表,环回链表*/
+{"队列":L/RPUSH|R/LPOP}
+}
+
+
+{"SET":
+{"存储":"无序集合"}
+{"使用方法":
+{"SADD":"集合添加元素"}
+{"SREM":"删除"}
+{"SCARD":"元素个数"}
+{"SMEMBER":"所有元素"},
+{"SISMEMBER":"判断一个元素是否存在"},
+{"SINTER":"交集"},
+{"SDIFF":"差集[key1]"},
+{"SUNION":"并集"}
+}}
+
+{"SortedSet":
+{"特性":"可排序,元素不重复,查询速度快"}
+,
+{"底层":"SkipList跳表+Hash list哈希+基于source属性排序"}
+{"使用方法":
+{"ZADD":"集合添加元素"}
+{"ZREM":"删除"}
+{"ZCARD":"个数"}
+{"ZSCORE":"score属性获取"},
+{"ZCOUNT":"范围内元素个数"},
+{"ZICRBY":"指定自增加元素，步长为指定的increment"},
+{"ZRANGE":"按照score排序后获取范围内元素"},
+{"ZRANGEBYSOCORE":"按照score排序后获取score范围内元素"}
+{"ZDIFF,ZINTER,ZUNION":"差集,交集,并集"}
+}}
+
+Jedis类的方法就是命令
+引入依赖
+建立连接
+private Jedis jedis
+@BeforeEach
+new Jedis(ip,port)/JDCF.getPool;
+jedis.auth();
+jedis.select(0);
+测试string
+@Test/语法糖
+jedis.set)_
+jedis.get()
+释放资源
+@AfterEach
+jedis.clonse();
+哈希声明
+Map<string,string>
+[线程不安全]
+使用线程池,防治频繁的销毁对象
+[线程池]新建对象
+public class JDCF{
+private status final JedisPool
+static{
+配置.()
+}
+//获取jedis对象
+public static Jedis getPool()
+{
+return  jedisool.getResouce()
+}
+WITEMILLis()等待时间是
+}
+
+spring整合(jedis和Lettuce)
+支持哨兵,redis集群,序列化,JDKCollection[操作集合]
+类redisTemplate有上百个方法
+API
+* 通用操作
+*.opsfFor Value/Hash 返回值ValueOpertion
+1.引入依赖对象[数据库,包名,等等]+建立连接pom.xml
+<dependency>
+ 
+2.配置文件ymal文件
+spring：
+      redis:
+         host:
+         port:
+         pasword
+         pool:
+>>>>>>>>>>>>.
+3注入模板
+@AutoWirted//注册
+//声明主类私有对象+注入
+4.使用
+
+自动(Object)缺点:占内存大,
+创建对象
+new
+设置连接工厂
+set
+创建JSON序列化工具
+new
+设置key序列化
+set
+设置Vule序列化
+
+
+引入依赖包
+<dependency>
+	<groupid></groupid>
+	<></>
+</*>
+
+<string.object>
+统一使用STRING序列化器
+要存储java对象时候需要手动序列化和反序列化
+json工具
+ObjectMapper
+创建对象
+手动序列化
+String json = mapper.writeValueAsString(new )
+写入数据
+获取数据
+手动反序列化
+mapper.readValue(bytes,User.class)
+
+
+
+[企业实战]
+	[短信登录]
+		[redis解决集群section问题]
+			前后端分离模式:
+
+
+
+
+			[  ]—				  		Redis集群
+
+			{   }——      nginx	——	tomcat[(default)|集群]      
+
+			[  ]—				  		Mysql集群
+					
+
+
+			Object.pattern
+			  	web
+				|
+			        ___________
+			        port  |port2
+			         __________
+			        |	        |
+			*==[前端[使用token设置拦截器]]<—>[后端]{"Redis","Mysql"}
+			++++++++++++++++++
+			[短信登录]
+				输入_>发送请求验证码[session]->
+				效验手机号与验证码
+				查询手机号在数据库内
+				查询验证码
+			[登录验证功能]
+								              OrderController
+				[]==[拦截器{"通过接口实现"}{"imlements:HanderInterceptor"}{}]<——>UserController              [Controller集群[线程空间保存用户信息]]
+								              XXXController
+			
+				SESSION.getAttribute("字段",Object);
+			解决问题:多台tomcat不共享空间,session数据丢失：session空间独立
+			解决方案:[redsi]数据共享，内存存储,key-value结构
+
+			Hash结构必json格式更小可以对单个字段做CURD
+			BeanUtil工具与Map转储
+			
+			[方法]expire()到期
+			        entries()进入，参与,机会(刷入内存)
+			[拦截器[校验存储]]-[拦截器[是否存在,是否拦截]]=[注册器（）.order(物质顺序)]
+
+
+@类名 生成 对应包
+
+	[商户查询缓存]
+
+
+	
+
+	[优惠券秒杀]
+	[异步函数]
+	[redisson分布式锁]
+	subscribe(threadID)订阅
+		[可重入lock——Thread]：利用hash结构记录线程id 和重入次数(>0)[+-1]
+		[可重试:利用信号量和PubSub功能实现等待,唤醒,获取失败的重试机制]
+		[超时续约:每隔一段时间重置超时时间,wite释放信号,有效期watchDod]
+		[                                                                                                                ]
+		[主从一致]
+		
+	[达人探店]
+		[拼小圈，广告，微信，招租]
+		发布笔记,点赞,排行榜	
+		数据库:tb_blog笔记,
+			tb_blog_comment评价
+
+	[好友关注]
+
+
+	[附近商户]
+		[GEO数据结构]
+		[GEOADD]:精度:维度:值
+
+		[GEOSIAT]:计算两点距离
+		[GEOHASH]:返回HASH
+	
+		[GEOPOS]:返回坐标
+		[GEORADIUS]:指定圆心,找memeber按距离排序
+		[GEOSEARCH]:搜索指定范围内memeber搜索
+		[GEOSEARCHSTORE]:返回结果存储在key内
+
+	[用户签到]
+		[BitMap用法]
+		SETBIT指定位置存储一个0or1
+		GETBIT
+		BITCOUNT
+		BITFIELD查询[一次查多个]修改自增	GET u|i有无符号 	
+		BITFIELD_RO查询结构以十进制返回
+		BITOP多个BitMap做位运算
+		BITPOS查找bit数组中指定范围内第一个0or1
+		yelid[-1] & 1	
+	[UV统计]
+		HyperLogLog[HLL从lloglog算法派生的概率算法,取定非常大几何的基数,
+		不需要存储所有值,有小于0.81%的误差,内存永远小于16Kb,对于UV来说可以忽略.]
+		
+		UV
+		独立游客访问量
+		PV
+		页面点击量,用户多次访问
+		UV+PV用户粘度
+		
+		PFADD key value
+		pfcount 
+
+
+
+		统计Count()
+		
+bean豆荚[豌豆射手]
+
+
+
+
+
+[Thread_Local]用户线程独立存储空间
+[谁[Object]用谁依赖注入]
+
+
+安全性
+[不可重入]
+[可重入]
+[multLock[可重入集合]]
+
+
+信息
+[前置][业务中]
+
+
+[消息队列[MQ]实现异步秒杀]
+[pub/sub]消息队列
+subscribe order.q1 消费者一
+psubscribe order.* 消费者二
+publish order.q1 hello 生产发布
+publish order.q2 hello2
+
+[Stream]
+实现一个功能完善的消息队列
+
+[消费者组Consumer Group]
+消息分流:count 1消息数量
+消息标示:
+消息确认:XACK
+
+create().子命令
+
+主命令 从命令
+
+
+
+
+[分布式缓存]{redis集群}
+	数据丢失 			故障恢复 								并发能力{读多,写少}				存储能力{提升写能力}
+	[数据持久化]		[哨兵实现健康监测和自动恢复]						[主从集群,读写分离]				[分片集群,插槽机制动态扩容]
+	{RDB:redis数据备份}		哨兵(Sentinel)							数据同步原理				{}
+	快照文件			监控:不断地检查							在master中的默认多余配置
+	保存在当前运行目录		自动故障恢复:从节点			
+				变更主节点							repl-diskless-sunc yes 无磁盘复制
+	默认操作集合		通知:服务变更通知							网络带宽快,使用无磁盘复制
+	redis-cli			主观下线:超时未响应							单节点不要过大
+	redis-server:(#ip:port)>>value	客观下线:超过quorum配置数量						提高repl_bak_log大小					
+	主进程阻塞		选举:判断从节点与主节点断开						限制一个master上的节点数量
+	redis-server:ip>>save	时间长短超过(down-after-milliseconds*10)排除		         		{read()}   port3{slavof ip[master] port[master]}slave/replicae
+				判断slave-priority越小优先级越				   			[全量同步]{请求增量同步,保存版本;,清空本地加载RDB;,执行缓冲区命令}
+				高						【】-redis-client      {write()}  port1{}master
+				salve-offset越大越新								[全量同步{判断是否第一次?返回版本增量同步:全量同步;
+				[]salve的id大小越小优先级越高							执行bgsave生成RDB,记录RDB时间段的命令到缓冲区repl_baklog,发送RDB;
+													发送repl_baklog命令}
+				      									[增量同步]{判断是否一致?返回版本增量同步:回复continue;
+				slaveof no one从->主								取repl_baklog获取offset后的数据,发送repl_baklog}
+			         	对其他从节点发送slaveof ip port
+				主节点配置修改							{read()}   port2{replicaof ip[master] port[master]}slave/replicae
+							      						[增量同步]{重启psync replid offset;,执行repl_baklog环形数组中的命令}
+					
+												repl_baklog溢出?全量同步:nil
+
+	子进程异步执行
+	redis-server:ip>>bgsave
+	默认相关配置
+	save 隔离秒数 隔离次数
+	
+	是否压缩
+	rdbcompression yes
+	dbfilename dump.rdb
+	dir 路径
+	
+	{AOF:redis追加文件}
+	AOF格式
+	*len($[end])
+	$(len(str[count++]))
+	str[index]
+	默认操作集合
+	[AOF异步执行]
+	redis-server:ip>>bgrewriteaof
+	默认相关配置
+	appendonly yes
+	appendfilename "appendonly.aof"
+	频率
+	appendfsync always{次为周期}/|AOF缓冲区开启|everysec{秒为周期}/no{操作系统周期}
+	
+	增长百分比
+	auto-aof-rewrite-percentage 百分比
+	文件大小最小触发
+	auto-aof-rewrite-min-size	
+
+
+
+
+[-主进程-]			    [子进程]----[{写新RDB}]
+{页表}  fork(copy 页表_>子进程页表){页表}
+[物理内存{数据A}{数据B}]
+{copy read-only}
+
+
+[异步|后台|子进程]
+
+[系统资源::CPU
+              ::内存]
+[磁盘资源::资源]
+
+
+查看当前节点以及状态
+info
+
+redis节点特点:redis:master.conf
+
+
+[同步判断]
+{master声明}
+	Replication ID数据集标记,slave会继承master的replid
+	offset偏移量
+
+
+
+echo 节点1 节点2 节点3|xargs -t -n 1 cp redis.conf{}redis配置目录{}
+
+[文裆操作]
+sed  -i '操作方法' { -e "sed源码" -e}
+"s/原数据/修改后数据/g"
+
+xargs[批量操作]
+printf '%s\n' port1 2 3|xargs -I{指定端口} sed -i{指定写操作} '[行号1a] replica-announce-ip ip  ' {}/
+
+
+
+[搭建哨兵集群]
+s1/sentinel.conf	ip:port
+port
+sentinel announce-ip ip[master]
+$           monitor mymaster[主节点名字|集群名字] ip[master] port[master] 2[=quorum]
+$ 	down-after-milliseconds mymaster[主节点名字|集群名字] 5000[最长超时时间]
+$	failover-timeout mymaster[主节点名字|集群名字 60000
+dir "工作目录"
+s2/ip:port
+s3/ip:port
+[运行哨兵集群]
+redis-sentinel 工作目录/配置文件
+
+
+redis启动模式
+redsi-服务 配置.conf
+
+
+S/O主从模式[主观/客观]||down下线
+
+
+
+
+[Lins自定义文件模式]
+{}迭代echo 变量名1 变量名2
+resources配置
+application.yaml级别名称
+
+
+{[搭建分片集群]}
+海量数据	高并发写
+多个master
+[集群trial]
+每个master保存不同数据
+每个master多个slave节点
+masterz之间通过ping互相检测彼此健康
+客户端请求自动master路由
+
+
+
+{master}______________
+     |		  |(1)心跳ping
+     |(1)		{master}
+{master}______________|(1)
+
+
+集群{主从一致文件}默认@Config
+port 6379
+开启功能
+cluster-enabled yes
+redis自己维护自己的配置文件
+cluster-config-file 配置文件路径
+cluster-node-timeout 节点心跳超时时间
+dir 工作目录
+bind 绑定地址
+后台运行
+daemonize yes
+注册实际Ip
+replica-announce-ip ip
+保护模式(开起后无需登录密码校验)
+protected-mode no
+数据库数量
+database 1
+日志
+logfile 日志路径
+————————————————————————
+集群创建管理
+redis-cli --cluster create --cluster-reolicas 1（）一主一从 ip:port ipmaster:port ip:port [[master]&[slave]] ip:port ip:port ip:port
+slots:[0-xxx]散列插槽绑定master【把一个master节点映射到0-xxx个插槽上】
+根据 value(key=={itcast}key?return itcast:return key) 计算，
+利用CRC16算法得到hash对xxx取余得到的结果就是slot 
+[自动寻路]
+计算插槽,访问节点
+
+[集群伸缩]
+redis-cli --cluster add-node  new_host:now_port existing_host:existing_port [--cluster-slave|--cluster-master{指定添加节点的属性为主or从}]//生成主节点无插槽
+reshard host:port
+{number}slots:xxx
+id:ID
+
+M|S: ID IP:PORT
+ slots:[zzz-aaa]|slave
+数据跟着插槽走
+
+
+[宕机]
+redis-cli -p 7002 shutdown
+故障转移
+状态master,fail
+该实例与其他实例失去连接
+疑似宕机
+
+确定下线自动提升一个新slave
+
+
+1.slave告诉master拒绝客户端
+2.master返回offset
+3.确认offset一致
+4.开始故障转移
+5.标记自己为master广播结果
+6.收到广播开始出炉客户端请求
+
+[slave]
+{1,,3,4,5,}
+[master]
+{,2,,,4,,6}
+[other master]
+{,,,,,,6|nil}
+无感知数据迁移
+手动failover三种模式:
+缺省(default)
+force：省略校验
+tackeover：直接执行第5步,不论一致性master状态和其他master意见
+默认执行命令
+cluster server ip:port>>cluster failover 宕机命令
+
+[多级缓存]
+亿级流量缓存方案
+问题:任何数据需要先进过TOMCAT ,Redis周期有限
+O->浏览器静态缓存——>Nginx(本地缓存)—{nginx缓存未命中}—>redis—{redis未命中}—>TOMCAT进程缓存—{进程未命中}—>select database();
+
+
+
+		[xxx.html]
+O->浏览器静态缓存—>nginx(反向代理)—>Nginx[集群](本地缓存)—{nginx缓存未命中}—>redis—{redis未命中}—>TOMCAT进程缓存—{进程未命中}—>select database();
+		1_JVM进程代理       2_nginx编程(lua)		3_多级缓存		4_缓存同步策略
+
+
+@1_JVM进程本地缓存{HashMap,GuavaCache等}
+导入案例
+
+商品表
+库存表_stock
+
+商品查询页面
+
+
+
+用户通过ajax发送到代理()
+#openresty业务集群,nginx缓存,redis缓存,tomcat查询
+upstream nginx-cluster
+{
+	ip:port
+}
+server{
+	location /api{//监听api
+	/**redis分布式:
+	存在网络开销
+	数据大，可靠性高，集群共享
+	进程本地缓存:
+	存储容量有限,可靠性低,无发共享
+	性能高，缓存数据量小*/
+	
+	}
+}
+
+
+Caffeine咖啡因
+基于JAVA8开发。提供最佳命中率,本地缓存库。
+缓存对象
+Cache<,>
+cache.put(key|key(id),value|数据库的key->{return 数据库})
+输入->{输出}
+
+
+基于容量
+基于有效事件
+基于引用:软引用或者弱引用,利用GC回收
+空闲或者再一次读写执行清理策略
+注入声明类型{
+@Autowrite
+声明类型
+}
+@Configuration
+public class CaffenineConfig{
+	@Bean
+	public Cach<>
+	{return Caffeine.newBuild()
+		.initialCapacity(100)
+		.maximumSize(10_000)
+		.build();
+	}
+
+}
+
+
+nginx+lua{由C语言编写,可嵌入一切由C语言编写的软件接口,脚本语言,实现业务线程原子性}
+实现nginx缓存集群
+lua数据类型
+nil与flase等值
+boolean
+number双精度类型实现浮点数
+string
+function:C或lua编写的函数
+table:关联数组，索引可以使数字数组字符串
+全局变量
+(default) SDS=
+局部变量
+local       SDS=
+数组转字典ipairs(arr) 返回值为key  value
+arr={"",}
+表单转字典pairs(map)返回值为key  value
+map={naem="",age=}
+print(map[]|map.name)
+——————————
+函数(代码库封装)	|
+function 函数名()	|
+end		|
+——————————
+条件控制流
+if(布尔表达式)
+then
+
+else
+
+end
+
+布尔表达式
+操作符
+and
+or
+not
+拼接''...变量...''
+多级缓存
+OPenResty[基于Njinx的高性能Web平台]{插件聚合体:组件}
+安装:
+依赖网络(安装依赖库)
+安装OPenResty仓库
+安装OPenResty
+安装OPenResty管理工具(方便下载插件)
+/etc/profile系统环境变量配置文件
+
+
+
+
+njinx.conf内
+http下面添加lua模块加载
+http{
+加载Lua
+lua_package_path "路径/lualib/?.lua;;";
+加载C
+lua_package_cpath
+server{
+	listen port//服务监听端口
+	server_name server1
+servser下编写监听
+	location /api/iteam{//监听文件
+	默认响应类型响应类型
+	default_type application/json
+	响应数据有*.lua这个文件决定
+	content_by_lua_file /njinx/lua/iteam.lua
+}
+}
+
+[iteam.lua]
+--导入库
+local common = require('目录名/文件名')
+获取函数
+local read_http = common.read_http
+
+ngx.say("key":"数据与数据",...)
+tmx操作集合:
+mkdir 文件夹
+touch 文件
+		正则匹配  ······存储到数组ngx.var
+路径占位符	路径\(\d+)	   ngx.var[1]
+请求头
+ngx.req.get_headers()
+获取GET请求参数 ngx.req.get_uri_args()#return new tableutil.totable()
+读取请求体ngx.req.read_body()
+获取POST表单参数 ngx.req.get_post_args()#return new tableutil.totable()
+获取JSON参数 ngx.req.get_body_args()#read(body.json) retuen new stringutil.tostring()
+
+
+本地缓存[缓存来自tomcat]:[查询tomcat]:tomcat进程缓存
+
+*.*.*.1 访问windows系统
+1.查询
+nginx内部API
+local resp = ngx.location.capture(
+"/path",//nginx监听路径
+method=,//http方法
+args=(a=1,b=2),//GET参数
+body="c=3&d=4"//POST参数
+)/**需要添加配置
+*	location /tomacat请求地址 {
+*	proxy_pass http://192.168.*.1:port//tomcat的反向代理
+*	}
+*/
+2.封装数据
+
+
+{[lua函数封装]
+local function read_http(path,params)
+	local resp = 
+	ngx.location.capture(
+	path,
+	method=ngx.HTTP_GET,
+	args=params
+	)/**需要添加配置
+	if not resp then
+		ngx.log(ngx.ERR,"http erro 404 , path : ",path, "  args: ",args)
+		ngx..exit(404)
+	end
+	return resp.body
+end
+//--方法导出
+local _M ={
+	read_http = read_http
+	方法名      = 方法名
+}
+return _M
+[end]
+}
+
+cjson简单应用
+local cjson = require 'cjson'
+反序列化
+local table = cjson.decode(JSON数据)#return table
+序列化
+local json = cjson.encode(TABLE数据)#return json
+————————————————————————————
+
+集群负载均衡:定义upstream  集群名字{
+	#防轮询 hash $request_uri修改负载均衡算法
+	server tomcatip:port	
+	server tomcatip:port
+	}
+	反向代理配置
+	location /iteam {
+	proxy_pass http://集群名
+	}
+
+
+
+
+反向代理先查redis,再查tomcat
+冷启动:数据库压力过大
+
+
+使用redis模块
+local redis = require('文件名.redis')
+创建redis对象
+local red =redis:new()
+red:set_timeouts(1000,1000,1000)
+--释放连接池工具
+local function clonse_redis(red)
+	local pool_nax_idle_time=10000//链接空闲时间
+	local pool_size=100//链接池大小
+	local ok,err = red:set_keepalive(pool_nax_idle_time,pool_size)
+	if not ok then
+		ngx.log(ngx.ERR,"放入Redis连接池失败",err)
+	end
+end
+--查询数据连接
+
+缓存预热:实际开发中,利用大数据统计用户访问热点数据，启动时查询并保存到redis
+
+
+设置本地缓存
+开启共享字典
+lua_shared_dist item_cache[name] 150m[size]
+操作字典
+获取本地缓存对象
+Local item_cache = ngx.shard.item_cache
+存储
+item_cache:set('key','value',过期时间s|0永不过期)
+读取
+local val = item_cache:get('key')
+
+
+[缓存同步]{策略}
+设置有效期:到期自动更新
+优点:简单,方便
+缺点:时效性差
+场景:更新频率较低,时效性要求较低
+同步双写:修改数据库同时修改缓存
+时效性强,与数据库强一致
+有代码入侵,耦合度高
+对一致性，时效性要求较高的缓存数据
+异步通知:修改数据库时，发送事件通知。相关业务监听到通知后修改缓存数据
+低耦合,可同时通知多个缓存服务
+时效性一般，可能存在中间不一致状态
+时效性一般，有多个服务需要同步
+
+[IO thread读binary log 回写入relay log,slave mysql thread 读replay log 重放 replay log events]
+mysql的master将数据写入binary log
+记录的数据叫做binary log events事件
+slave节点将master节点的binary log events拷贝到它的中继日志(relay log)
+mysql slave重放relay log events
+canal将自己伪装成Mysql的slave节点监听binary log日志,记录事件发送重放通知到各个服务中
+mysql从节点需要创建用户服务权限
+文件名 position偏移量 数据库名
+
+docker network create 数据库名{网络名}创建网络
+docker network connect {网络名} mysql(服务进程名){mysql加入网络}
+
+docker images
+
+==>start successful开启成功
+
+docker load -i 安装包
+docker **
+-e **.**
+canal:
+	destination:网络名
+	sever:IP:port
+
+
+
+key:redis最佳实践
+
+[value:[Redis键值设计]]
+基本约定
+[业务名]:[数据名]:[id]
+不超过44字节
+不包含特殊字符
+优点
+可读性强
+避免key冲突
+方便管理
+更节省内存:key是string 类型底层编码包含int embstr raw三种,embstr在小于等于44字节使用采用连续内存空间.
+
+底层编码取决于value
+"<=":"上限"
+object [] key
+[拒绝Bigkey]
+memory usage key{根据key长度和key成员数量综合判断}
+key本身>=5Mb
+key成员数量过多:ZSET>=10000
+key成员数据量过大:Hash的成员数量只有10000个但成员的值总大小为100M
+
+{推荐值}key的value<=10kb,对于集合类型的key,元素数量小于1000
+
+llen
+{危害}
+网络阻塞
+导致redis实例或者物理机变慢
+数据倾斜
+无法让分片的内存资源达到均衡
+Redis阻塞
+对于院所较多的hash,list,zset做运算耗时大,主进程被阻塞
+CPU压力
+序列化和反序列化会导致CPU使用率飙升,影响redis和其他物理机
+
+
+
+检查方案{
+redis-cli -a 密码 --bihkeys
+
+scan扫描
+自己编程长度判断
+
+第三方工具
+redis-rdb-tools：离线分析RDB文件
+
+网络监控
+自定义工具，监控进出网络工具，超出告警{阿里云等云服务自带}
+
+
+}
+summary摘要
+cursor游标
+删除Bigkey{
+<3.0
+先删除子元素,再删除key
+>4,0
+unlink异步线程删除
+}
+
+恰当的数据类型:
+方法一:json字符串 
+优点:实现简单粗暴
+缺点:数据耦合不够灵活
+方法二:字段打撒
+优点:减小数据耦合,数据更加灵活
+缺点:占用空间过大,无法统一控制
+方法三:hash
+优点:采用ziplis，空间占用小，可灵活访问
+缺点:代码相对复杂
+
+
+bighash问题:
+方案一:
+hash的entry数量超过500时,会使用hash表而不是ziplist，内存占用过多
+可通过hash-max-ziplist-entries配置entry上限,entry过大会导致bigkey问题。
+动态:port>>config set  hash-max-ziplist-entries [entry上限]
+方案二:拆分为string
+string底层结构无优化，内存占用多
+获取批量数据更麻烦
+方案三:除数作为key，余数作为field
+大hash拆分成多个小hash
+
+[检查:port>>info key]
+
+
+批处理优化:
+	pipeline
+		大数据量导入
+			N+1方案:port>>help mxx
+			N+1方案:port>>mset key value
+			N+1方案:port>>hmset key value
+		复杂数据类型与复杂需求类型
+		SADD无法制定不同类型的key
+		pipeline.set()放入管道
+		Pipline.sync()启动批处理				
+	集群下的批处理:
+		批处理命令多个key必须落在一个插槽中,否则执行失败
+		
+
+服务端优化:
+	持久化配置
+		建议:
+			缓存redis实例不要持久化
+			建议关闭RDB,使用AOF持久化
+			利用脚本定期在slave节点做RDB,实现数据备份
+			设置合理rewrite阈值避免频繁bgrewrite
+			配置no-appendfsync-on-rewrite=yes禁止在rewrite期间做aof,避免AOF阻塞
+			
+			{fsync时间对比}
+		部署建议:
+			为redis实例预留足够内存对应fork,rewrite
+			单个redis实例内存上限不要太大,例如4G-8G，可加快fork速度，减少主从同步，数据迁移压力
+			不要与CPU密集型应用部署放在一起
+			不要与高硬盘负载应用在一起部署，例如数据库消息库
+	慢查询:
+		Redis执行耗时超过某个阈值的命令
+		慢查询阈值slowlog-log-slower-then默认10000微秒
+		慢查询会记录到慢查询日志中,日志长度有上限
+		slower-max-len 默认128(本质是一个队列)
+		命令聚合:
+		slowlog len
+		slowlog get
+		1)1)编号
+		  2)时间戳
+		  3)耗时
+		  4)1)keys
+		     2)*
+		  5)ip:port
+		  6)客户端名称
+		服务信息:
+	敏感命令安全配置:
+		redis身份认证漏洞
+		2.ssh-keys免秘钥登录
+		ssh-kengen -t rsa 本地生成公钥私钥
+				[	公钥——>服务器
+		ssh-kengen -t rsa---	[	私钥——>本地
+
+		______________________________________________--
+		redis在无需第一次登录的前提下直接认证登录
+		———————————————————————--
+		写入公钥
+		keys:value=ssh_key
+		cat flag.txt|redis-cli -h ip:port -x set keys ssh_key
+		redis-cli -h ip:port
+		config set dir /root/ssh
+		config set dbfilename "an.keys"
+		save
+		———————————————————————--
+		核心原因
+		redis未设置密码
+		使用了config set动态修改了配置
+		使用root账号启动权限
+		配置:
+		1.redis设置复杂密码
+		2.禁止线上命令:keys，flushall,flushdb,config set{配置rename-command config "config命令的新名字"}
+		3.bind：限制网卡,绑定局域网网卡
+		4.开启防火墙
+		5.不要使用root启动redis
+		6.尽量不要使用默认的端口
+		———————————————————————--
+	内存配置:
+		可能导致key频繁删除,响应时间变长,QPS不稳定
+		内存使用达到90%的时候需要警惕,并快速定位.
+	内存占用:
+		数据内存:是redis主要部分,存储redis的键值信息,主要问题是bigkey问题,内存碎片问题。
+		进程内存:redis主进程本身,如代码,常量池,大约几兆，大多数生产环境中与数据相比可以忽略
+		缓冲区内存:一般包括客户端缓冲区,AOF缓冲区，复制缓冲区。占用波动过大，不其党的bigkey，可能导致内存溢出
+		检查命令:info memory查看各个模块的内存占用
+			memory xxx统计内存
+		peaK启动消耗内存峰值
+		total当前内存峰值
+		start进程内存
+		缓冲区:
+			复制缓冲区:主从复制的repl-backlog-buf[-size] 默认1mb(1兆)
+			AOF缓冲区:AOF输盘之前的缓存区域,AOF执行rewrite的缓冲区无法设置容量上限
+			客户端缓冲区:分为输入{服务器命令执行队列}和输出{执行结果返回客户端}缓冲区，输入缓冲区最大1GB不能设置，输出缓冲区可以设置。
+			配置:
+			client-output-buffer-limit <class> <hard limit缓冲区在超过limit断开客户端>  <soft limit> <soft secondes缓冲区上限超过Limite过secondes秒后断开>
+				normal:普通客户端
+				replica:主从复制客户端
+				pubsub：PubSub客户端
+			定位客户端缓冲区:
+				info client
+				client list链接到当前机械的所有客户端
+[集群最佳实践]
+	问题:
+	1.完整性:cluster-require-full-coverage yes{保持可用性设置为flase}一个插槽不可用则都不可用
+	2.带宽问题:
+		每次ping携带:插槽信息,集群状态信息
+		避免大集群,集群节点不要太多,业务大多集群
+		避免单个五里界中运行多个redis实例
+		配置合适的客观下线时间,配置cluster-node-timeout值{ping时间为超时时间的1/2}
+	3.数据倾斜
+	4.客户端性能问题
+	5.命令集群兼容性:批命令统一插槽
+	6.lua和事务问题
+		
+	单体redis已经达到万级QPS,具备高可用性,逐层能满足的情况下,不要用集群。
+
+
+
+[redis原理篇]{高级面试}
+	struct redis{key:string,value:(set|string)
+	{"数据结构":
+	["动态字符串":"SDS"]
+	{"简单动态字符串SDS(Simple Dynamic String)":"结构体":
+"struct __attribute__ ((__packed__)) sdshdr16 {
+    uint16_t len;  //buf已保存字节数,不包含结束标示			}
+    uint16_t alloc;  //buf申请字节数,不包含结束标示			}---header
+    unsigned char flags; //不同SDS的头类型,来控制SDS头大小		}
+    char buf[];
+};
+
+ __attribute__ ((__packed__)):告诉编译器取消结构体在编译过程中的优化对齐，按照实际占用字节数进行对齐。
+struct __attribute__ ((__packed__)) sdshdr32 {
+    uint32_t len;
+    uint32_t alloc; 
+    unsigned char flags;
+    char buf[];
+};
+"
+"动态扩容":'新字符串小于1M，新空间为扩展后字符串*2+1;大于1MB，新空间为扩展后的长度+1M+1,称为内存预分配"
+"优点":"减少内存分配次数"
+	"C语言的str本质是str[]数组":"存在问题":
+	"获取字符串长度需要运算len()-1"
+	"非二进制安全(字符串数组内读到\0结束)"
+	"不可修改"
+	}
+	[IntSet:"整数集合"]
+	{"在C语言数组上的封装":"
+typedef struct intset {
+    uint32_t encoding;//编码方式[共三种]{扩容时编码向上转型}	}---Header
+    uint32_t length;//元素个数				}
+    int8_t contents[];//整数数组,保存集合数据		]--body
+} intset;"}:"redis确保inset中元素唯一,有序
+	具备类型升级机制，节省内存空间
+	底层采用二分查找来查询"
+	
+	[dict:"键值数据{例如java中的hashmap}"]
+	{"dict哈希表"
+typedef struct dictht {
+    //哈希表数组
+    dictEntry **table;
+    //哈希表大小=2^n
+    unsigned long size;  
+    //哈希表大小掩码，用于计算索引值=size-1
+    unsigned long sizemask;
+    //该哈希表已有的节点数量
+    unsigned long used;
+} dictht
+	"dictentry哈希节点"
+	
+typedef struct dictEntry {
+    void *key; //键
+    union {
+        void *val;
+        uint64_t u64;
+        int64_t s64;
+        double d;
+    } v;//值
+    //下一个hash节点指针
+    struct dictEntry *next;     /* Next entry in the same hash bucket. */
+    void *metadata[];           /* An arbitrary number of bytes (starting at a
+                                 * pointer-aligned address) of size as returned
+                                 * by dictType's dictEntryMetadataBytes(). */
+} dictEntry
+
+	"dict字典"
+typedef struct dict {
+   dictEntry *type//dict类型内置不同的hash函数
+    void *privdata;//私有数据在特殊hash时进行运算
+	//两个Hash表，交替使用，用于rehash操作
+    dictht ht[2]; 
+	long reshashidx//默认-1进度
+int16_t pausereshash；//1暂停，0继续rehash
+    …
+} dict;
+dict-dictht[0]--{ 	dictEntry*[0]--dictEntry(key,val,*next)
+		dictEntry*[1]--*
+     -dictht[1]--nil
+	}{对size求余数或者hash(key)&sizemask=(dictEntry*[]的脚标)}//新元素永远在节点头部
+	每次新增键值对都会检查负载因子(LoadFactor=used/size)，触发哈希扩容条件:
+		>=1，服务器没有执行bgsave或者bgrewriteaof等后台进程
+		>5
+		<0.1hash表进行收缩
+	
+	渐进式rehash{多次rehash}
+	
+1计算新表size决定扩容Or收缩:
+	扩容size>=dict.ht[0].used+1的第一个2的倍数
+	收缩size>=dict.ht[0].used的第一个2的倍数
+	每次访问DIct执行一次reshash
+
+
+-----------------------------------------
+[Ziplist:"特殊的双端链表,任意一端压入/弹出操作时间复杂度O(1),内存空间连续"]
+[zlbytes][zltail][zllen(=2字节)][entry]......[entry][zlend=0xff]
+|           |	           |	   	|          |    |	       |
+|           |	len(entry)		head     |  tail	       |
+|_______|____________________________|	                       |
+|           |(ztail(=4字节)尾偏移量)		       |
+|_______|_____________________________________________|
+(zlbytes(=4字节)整个压缩列表占用字节数)
+entry(不定)
+[previous_entry_length=前一节点长度(下雨254用1个字节保存长度,大于245字节用5字节保存第一个字节为0xfe后四个字节为真实长度数据)][encoding=编码属性(1 or 2 or 5字节)][content=数据]
+编码
+00pppppp<=63
+01pppppp|qqqqqqqq<=16383
+fe|10000000|pppppppp|qqqqqqqq|rrrrrrrr|ssssssss|tttttttt|<=42944967295
+按小端序存储编码位
+小端序存储header
+{连锁更新}:[Cascade Update]
+发生条件:N个连续长度为250-253字节之间的节点.
+与链表类似都是逐个遍历.
+——————————————————————————————————————————
+[QuickList:"ziplist的缺点无法申请过大内存,为了缓解逐个内存上限问题;运用数据分片来存储数据;redis>3.2引入新的数据结构ziplist"]
+QuickLIst Node<——>QuickLIst Node***QuickLIst Node<——>QuickLIst Node
+|-(ziplist)		   |-(ziplist)	|-(ziplist)		   |-(ziplist)
+配置每个ziplist大小:port>>config set list-max-ziplist-size $
+对节点的ziplist做压缩,通过list-compress-depth [0不压缩;1首尾各有一个节点不压缩,中间节点压缩;2首尾各有2个节点不压缩,中间节点压缩]
+前向指针:逆序遍历
+后向指针:向后遍历
+____________________________________________________________________________________
+[SkipList(调表):"普通链表的指针跨度是1"]
+差异:
+元素按照升序排列存储
+节点可能包含多个指针,指针跨度不同.[指针等级与空间跨度有关,最该级别为32级指针]
+____________________________________________________________________________________
+RedisObject(16字节)
+typedef struct redisObject{
+un4 type:4;对象类型,分别是string,hash,list,set,zset  #define OBJ_STRING 0
+un encoding:4;底层编码方式共11种
+un lru:LRU_BITS；lru表示该对象最后一次被访问的时间,便于判断空闲时间太久的key
+int refcount;对像引用计数器,为0表示可被回收
+void *ptr;指向实际数据空间
+}robj;//共(4+4+24)bit
+
+string：int,embstr,raw
+list：linkedlist,ZipList(<3.2)，Quicklist(>=3.2)
+set:intset,HT
+zset：ziplist HT,SkipList
+hash:ziplist,HT
+
+_____________________________________________________________________________________
+五种类型:
+String：基本编码方式是RAW,基于(sds),上限为512mb
+embstr(<=44字节):objecthead是一段连续空间，申请一次内存即可
+内存分配算法采用(2^n)
+当存储字符串是整数值且小于(<LONG_MAX)使用INT编码,指针位置(8字节)直接存储数据.
+
+List:擅长首尾操作元素
+linkedlist:普通链表,可以从双端访问,内存占用较高,内存碎片多
+ziplist:压缩链表,可以从双端访问,内存占用低,存储上限低
+quicklist:可以双端访问,内存占用低,存储上限高
+
+
+Set:查询元素效率高("HashTable":"Dict")
+trait2:(为了高效和唯一,HT编码(Dict结构),value统一为null
+当所有元素为Int时数量不超过set_max-intset-entries,采用intset编码)
+trait:(
+不保证有序性
+保证元素唯一性(可以判断是否存在)：sinter(∩)
+求交集,并集,差集合)
+
+ZSet:"键值存储""键唯一""可排序"
+trait(
+可以根据score值排序后,
+member必须唯一,
+可以根据member查询分数,
+)
+SkipList:可排序,可存储score和ele值(key唯一性无法保存)
+HT(Dict):可键值存储,可以根据key找value(无法排序)
+struct{&dict:dict,&zsl:zkiplist}
+编码为skiplist
+{"内存占用过大,两套重复数据"}
+(元素数量小于zset_max_ziplist_entries(=0禁用ziplist) 默认128;
+单个元素大小zset_max_ziplist_value默认64;
+可采用ziplist编码)
+{ZADD key score member
+zscore key member查询score}
+
+lockupwrite根据key找zset不存在则创建新的zset
+
+
+Hash:
+键值存储
+根据键获得值
+键必须唯一
+区别:
+zset键是member值score
+hash无需排序
+默认采用ziplist
+转成HT结构的触发条件
+元素数量>zset_max_ziplist_entries(=0禁用ziplist) 默认512;
+单个元素>zset_max_ziplist_value默认64;
+____________________________________________________________________________________
+	}[底层运行]
+	{"网络模型":
+mod 用户空间{
+mod [系统接口]{
+mod [管理系统]{
+mod [驱动]{
+mod {硬件}{
+}
+}
+}
+}
+}
+寻址空间划分
+{内核态}	{用户态}
+[内核空间][用户空间]
+[高位][	      低位]
+风险等级
+linux：0，3
+
+[buffer]
+[buffer,network stack]
+{[network adapter]}
+
+[阻塞I/O]{UNIX网络模型}
+1.等待硬件设备到达内核缓冲区
+2.从缓冲区读取数据
+[非阻塞I/O]
+1.不断发起系统调用,拷贝过程中阻塞#忙轮询,忙等
+2.从用户缓冲区读取数据
+enum recvfrom(None(01:进程阻塞,11:CPU空转),True(读并处理数据))
+server处理cli的Socket请求时,单线程,一次一处理,正在处理的socket恰好未就绪(数据不可读或不可写)
+
+文件描述符:(FDescriptor):从0开始递增的无符号整数,关联Linux中的每一个文件
+[IO多路复用]:非阻塞I/O
+单线程监听多个FD,并在某个FD可读,可写时得到通知(readable),从而避免无效等待,充分利用CPU资源。
+减少了内核通知应用的次数
+mod select(){调用系统,接收多个sockets
+	返回readable;
+	recvfrom()调用系统监听一个FD,返回OK
+}
+系统通知:OK,readable
+{time↓}
+实现:
+遍历FD确认
+{pub mod select(监听最大值+1,
+fd_set	readfds,监听FD集合1)读
+	writefds,		2)写
+	expectfds,		3)异常
+	//nil永不超时,0不阻塞,大于0超时时间
+	struct timval *timeout){
+	1.用户创建fd_set rfds
+	2.若监听fd=1,2,3
+	3.执行函数
+	{用户空间的FD_Set拷贝到内核空间}
+	0.1.4.遍历fd_set找到就绪的fd
+	[内核]
+	1.遍历fd_set
+	2.没有就绪,休眠
+	3.等待数据被唤醒或超时
+	fd=1
+	{内核拷贝到用户覆盖用户空间的FD}
+存在问题:
+	需要将整个fd_set拷贝两次
+	select无法得知具体是哪个fd就绪,需要遍历整个fd_set
+	fd_set监听fd数量不能超过1024个
+
+	}
+1024bit位1bit为一个fd
+__fd_mask fds_bits[__FD_SETSIZE/__NFDBITS]//1024/32
+pub mod poll(
+struct pollfd *fds,//pollfd数组,可自定义大小
+nfds_t nfds//数组元素个数,
+int timeout超时时间){
+//poll事件类型
+#define POLLIN //可读
+#define POLLOUT //可写
+#define POLLERR //错误
+#define POLLNVAL //fd未打开
+//pollfd结构
+struct poolfd(fd:int//监听事件,events:short int///要监听的事件类型,revents:short int//实际发生类型)
+存在问题:
+	需要将整个fd_set拷贝两次
+	select无法得知具体是哪个fd就绪,需要遍历整个fd_set
+两者对比:
+	pollfd采用链表,理论无上限
+	监听FD越多,性能受影响
+}
+}
+直接找到就绪FD
+{
+struct eventpoll{
+		struct rb_root rbr;//红黑树（添加fd）
+		struct list_head rd_list;//链表（就绪队列）
+}
+mod epoll
+{
+	1.epoll_create(1)创建实例返回epfd句柄
+	2.epoll_ctl(epfd句柄,
+	op要执行的操作包括(ADD,MOD,DEL),
+	fd要监听的fd,
+	epollevents *event要监听的事件类型)添加要监听的FD,关联callback(..触发后节点添加到就绪链表){用户空间的FD拷贝到内核空间}
+	3.epoll_wait(
+	epfd实例的句柄,
+	epollevent	*events空的events数组用于接受就绪的FD,
+	maxevents当前events数组的最大长度
+	,timeout超时时间-1不超时,0不阻塞,大于0为阻塞时间)
+	检查就绪链表是否为空,不为空则返回链表中的FD,用户空间创建events空间该空间从就绪链表
+	{三大问题已解决}
+	红黑树保存FD,理论无上限,增删改查效率高,性能不会随着FD的数量下降
+	每个FD只需要一次epoll_ctl添加到红黑树,之后每次wait无需传递参数,无需重复拷贝FD到内核空间
+	用户空间无需遍历FD,直接使用就绪队列
+
+}
+{       ∪}
+{事件通知机制
+LevelTriggered：简称LT,当FD有数据可读时,会重复通知多次,直到数据处理完成,epoll默认模式
+问题:
+1.重复通知,性能的影响
+2.惊群现像,n个进程都监听当前某个FD就绪,所有进程都被唤醒
+EdegTriggered：简称ET,当FD有数据可读时,只会通知一次,不管数据是否处理处理完成//手动添加检查FD状态or一次读完(循环读非阻塞I/O)
+栗子:
+1.假设客户端socket对应的FD已经注册到了epoll实例中,
+2.客户端socket发送2kb数据
+3.服务端调用epoll_wait得到通知说FD就绪
+4.服务端从FD读取了1kb数据
+5.回到步骤3
+
+先移出list的指针再拷贝时间,检查是否残留数据,添加回List...
+}
+		|_________________________________________________________________________________________________________________list_head(链表记录就绪FD)
+[WEB-stream]	|____________________________________________________|(注册ep_poll_callback	|
+		|____________________________________________________|当FD就绪时将就绪FD	|
+		|____________________________________________________|记录到list_head链表)	|
+		|____________________________________________________|			|
+[内核空间]		|_____________________________________________re_root(红黑树记录监听的FD)	|
+		|					|注册FD			|(判断List_head是否为空)
+___________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+[用户空间]		|					|			|
+服务端_.epoll_create(创建实例)_.创建serversocker的FD,记做ssfd__________.epoll_ctl监听FD_______________.epoll_wait等待FD就绪____.是否有FD就绪_______.判断事件类型(epollin)____.是否是ssfd可读(FD请求连接)____.appcent()接收客户端socket,得到对应FD
+							 |				|————（no）——	|		             (epollerr)____.写出响应数据	     |			|
+							 |										    ||	                 （no）			|
+							 |										    ||—{读取数据请求} __ |			|
+							 |____________________________________________________________________________________________________________________________________________________|
+
+
+[信号驱动I/O]
+与内核建立SIGIO的信号的关联并设置回调,当内核中有FD就绪时,就会发送SIGIO信号通知用户,期间用户应用可以处理其他业务,无需阻塞等待.
+当有大量IO操作时,信号较多,SIGIO处理函数不能及时处理可能导致信号队列溢出,内核空间与用户空间频繁信号交互性能也叫低.
+
+[异步I/O]
+aio_read系统调用返回OK,进程不阻塞,内核完成任务后递交aio_read中的指定信号,用户信号处理函数.
+(需要限流,控制并发,实现繁琐)
+
+同步or异步在第二阶段是同步还是异步;
+阻塞非阻塞在第一阶段,
+第二阶段非阻塞为异步.
+
+
+[Redis][网络模型]
+1.redis是单线程还是多线程.
+核心业务处理,单线程
+整个redis,多线程
+1.为什么采用单线程
+纯内存操作,瓶颈是网络延迟,不是执行速度
+多线程导致多上下文切换,必然引入线程锁
+面临线程安全问题,必然引入线程锁,实现复杂度高,性能大打折扣
+2.
+ae.c环境判断
+ae*文件包含[api封装]:
+create创建程序
+add添加事件或者注册FD
+del删除FD
+poll等待FD就绪(epoll_wait,select,poll)
+
+
+server.c启动服务端
+initServer()//初始化服务
+{内部创建eventloop,监听TCP端口listentoport()创建ServertSockert,并得到FD，
+	注册连接处理器,内部调用aeapiaddevent监听FD，
+	注册ae_api_poll前的处理器//线程休眠之前的处理}
+aeMain()//开始监听事件循环
+{循环监听事件
+{//休眠之前先做处理
+//等待FD就绪
+for()//遍历已就绪FD并调用对应处理器
+}}
+acceptTcpHandler
+接收socket链接,获取FD
+//创建connection关联fd
+//调用注册FD函数
+//监听socket事件,并绑定该处理器readQueryFromClient
+
+	}[linux I/O底层模型]
+	{"通信协议":
+	"RESP协议":
+"C/S架构"
+1.客户端向服务端发命令
+2.服务端解析执行命令,返回响应结果给客户端
+ 1.2引入
+  2.0更新为RESP2
+6.0更新为升级到RESP3--增加了客户端缓存
+
+RESP中数据类型{服务器发送数据大于客户端发送数据,服务端一般发送大量数据到客户端缓冲区}
+"单行字符串":首字节是'+',以CRLF结尾.('\r\n')。常用于服务端返回字符串.
+"错误(Errors)":首字节'-',以CRLF结尾.('\r\n')。常用于服务器返回异常信息.
+"数值":首字节是':',以CRLF结尾.('\r\n')。
+
+"多行字符串":首字节是'$',表示支持二进制安全"允许字符串中存在\r\n",最大支持512MB。
+		"如果是$0代表空$0\r\n\r\n"
+		"如果是$-1表示不存在$-1\r\n"
+
+数组:首字节是'*',后面跟上数组元素个数,再跟上元素,元素类型不限,支持二进制安全.
+
+
+模拟redis客户端.
+main{
+try:
+1.建立连接
+2.获取输入输出流
+3.发出请求
+4.解析响应
+finerlly:
+5.释放连接
+}
+________________________________________________________________________________________________[Redis客户端]
+package com.company;
+
+import java.io.*;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Main {
+    static Socket s;
+    static PrintWriter writer;
+    static BufferedReader reader;
+    public static void main(String[] args) {
+        try{
+            String host= "127.0.0.1";
+            int port = 6379;
+            s = new Socket(host,port);
+            
+            writer = new PrintWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8));
+            reader = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+            sendRequest("auth","123321");
+            //发送请求+响应解析
+            sendRequest();
+            Object obj = handleResponse();
+            System.out.println("obj = " + obj);
+        
+
+        }catch(IOException e) {
+            e.printStackTrace();   
+        }finally {
+            try{            
+                if(reader != null) reader.close();
+                if(writer != null) writer.close();
+                if(s != null) s.close();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+        }
+}
+    private static Object handleResponse() throws IOException {
+    //读取首字节
+        int prefix = reader.read();
+        switch (prefix){        
+            case '+':
+                return   reader.readLine();
+            case '-':
+                throw  new RuntimeException(reader.readLine());
+            case ':':
+                return Long.parseLong(reader.readLine()); 
+            case '$':
+                int len= Integer.parseInt(reader.readLine());
+                if(len ==-1){
+                    return null;  }
+                if(len ==0){
+                    return "";}
+                return reader.readLine();
+            case '*':
+                return readBulkString();
+            default:
+                throw new RuntimeException("错误的数据格式");
+        }
+    }
+    private  static Object readBulkString() throws IOException{
+    //获取数组大小
+        int len = Integer.parseInt(reader.readLine());
+        if(len<=0){
+        return  null; }
+    //定义集合接受多个元素
+        List<Object> list = new ArrayList<>(len);
+        for(int i=0;i<len;i++){
+            list.add(handleResponse());
+        }
+        return list;
+    }
+
+
+    private static void sendRequest(String ... args){
+
+
+        writer.println("*"+args.length);
+        for(String arg:args){
+            writer.println("$"+arg.getBytes(StandardCharsets.UTF_8).length);
+        
+            writer.println(args);
+        }
+        writer.flush();
+    }
+
+
+}
+_______________________________________________________________________________
+
+
+
+	}[实现一个客户端]
+	{"内存策略":
+	[过期策略]:
+		{redisDB结构体}
+		expire {key} {TTL}
+		{redis如何了解key是否过期}
+			"惰性删除":访问key,检查TTL,过期则删除
+			"周期删除":周期性的抽样部分过期key,执行删除
+				{Redis初始化时设置定时任务ServerCron().按照server.hz频率.执行过期key清理.模式为slow}
+				{Redis每个事件循环器会调用beforeSleep().执行过期key清理.模式为fast}
+				SLOW模式
+				每次不超过25ms
+				1.每秒10次,每个周期100ms
+				2.执行清理耗时不超过25%
+				FAST模式
+				频率不固定,两次间隔不低于2ms,每次耗时不超过1ms
+	[淘汰策略]:
+		当内存达到阈值时,redis主动挑选部分key删除释放更多内存
+		processCommand()中执行淘汰策略
+		设置了maxmemory属性未有执行的lua脚本
+		尝试进行内存淘汰
+		策略:
+			maxmemory-policy 策略
+			noeviction不淘汰
+			volatile-ttl:TTL最小淘汰
+			allkeys-random：从db-dict中随机挑选
+			volatile-random：从db-expire中随机挑选
+			allkeys-lru：从db-dict中随机挑选
+			volatile-lru：根据robj->lru以秒为单位
+			allkeys-lfu：从db-dict中随机挑选
+			volatile-lfu:  根据robj->lfu以分单位记录最近一次访问时间,低八位记录逻辑访问次数(24bit)
+		逻辑访问次数:
+		1.生成0-1之间的随机数R
+		2.计算1/(旧次数*lfu_log_factor+1)，记录为P,lfu_*默认为10
+		3.如果R<P,则计数器+1,,最大不超过255
+		4.访问次数衰减,距离上一次访问时间间隔lfu_decay_time(衰减周期),计数器(-1)
+	LRU（）最少最近使用,当前时间减去最后一次访问时间,越大则淘汰等级越高
+	LFU（）最少频率使用,统计每个key的访问频率,值越小淘汰优先级越高
+	}[redis自身内存策略]
+
+{ps -ef|grep redis}

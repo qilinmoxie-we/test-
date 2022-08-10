@@ -1,0 +1,32 @@
+ 	线程
+ 	  |
+ ______________________
+|—创建	|—生命周期
+|—启动	|—通信
+|—休眠	|—优先级
+|—中断	|—同步
+|—插队	|--+
+_______________________
+
+	New  Runnable Running 		Blocked 		 				Terminated
+      1	   *       .start()      CPU0   	sleep()[休眠]/wait()[until  notify() or notifyAll()]/join()/wait I|O/锁    end comand "run()"/throw new exception() end/.stop()
+      2           *       .start()      CPU1
+主线程.start()
+创建子线程t,与主线程t并发执行(顺序随机).
+主线程.stop()
+interface Thread
+interface Runable
+
+static
+{
+赋值
+}
+
+@PostConstruct发送数据包
+
+JAVA 的接口泛型与封装
+
+/*
+@标记名
+这是注解而非语法糖
+*/
